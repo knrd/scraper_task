@@ -44,6 +44,7 @@ func Run(urlsQueue FifoQueue, numberOfScrapers int, cache Cache) Results {
 				resultsLock.Unlock()
 			case <-finishedChan:
 				// close this gorutine when scrapers are done
+				finishedChan <- struct{}{}
 				return
 			}
 		}
@@ -106,11 +107,10 @@ func Run(urlsQueue FifoQueue, numberOfScrapers int, cache Cache) Results {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-	close(finishedChan)
 
-	// aquire lock to prevent data race on `results`
-	resultsLock.Lock()
-	resultsLock.Unlock()
+	// wait for results collect gorutine to finish
+	finishedChan <- struct{}{}
+	<-finishedChan
 
 	return results
 }
